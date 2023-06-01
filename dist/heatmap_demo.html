@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Title</title>
+</head>
+<body>
+<script type="x-shader/x-vertex" id="vertexshader">
+	#ifdef GL_ES
+    precision highp float;
+    #endif
+    varying vec2 vUv;
+    void main() {
+ 
+	  // uv 和 顶点变换
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+ 
+    }
+ 
+  </script>
+ 
+<script type="x-shader/x-fragment" id="fragmentshader">
+ 
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+    varying vec2 vUv;
+    uniform sampler2D alphaScaleMap;
+    uniform sampler2D paletteMap;
+ 
+    void main() {
+      // 温度转为权重alpha 并且 createRadialGradient 渐变的图
+      vec4 alphaColor = texture2D(alphaScaleMap, vUv);
+ 
+	  // 根据温度转换为的权重alpha，确定改点的颜色 ，paletteMap 指定颜色条形图
+      vec4 color = texture2D(paletteMap, vec2(alphaColor.a, 0.0));
+      gl_FragColor = vec4(color.r, color.g, color.b, 1.0);
+    }
+ 
+  </script>
+<script type="importmap">
+			{
+				"imports": {
+					"three": "../modules/three.module.js"
+				}
+			}
+</script>
+ 
+<script type="module">
+ 
+	import * as THREE from '../modules/three.module.js';
+	import { OrbitControls } from '../modules/controls/OrbitControls.js';
+ 
+	let renderer, scene, camera;
+ 
+	const segments = 45;
+	const w = 256;
+	const h = 256;
+ 
+	// 随机给出温度值 储存在2维数组
+	const getTemperature = () => {
+		const temperatureArray = new Array();
+		for ( let i = 0; i < segments; i ++ ) {
+			temperatureArray[ i ] = parseInt( Math.random() * 25 + 10 );  // 颜色的变化区间 10 - 35
+		}
+ 
+		return temperatureArray;
+ 
+	};
+ 
+	// 绘制辐射圆
+	const drawCircular = ( context, opts ) => {
+ 
+		var { x, y, radius, weight } = opts;
+ 
+		radius = parseInt( radius * weight );
+ 
+		// 创建圆设置填充色
+		const rGradient = context.createRadialGradient( x, y, 0, x, y, radius );
+		rGradient.addColorStop( 0, 'rgba(255, 0, 0, 1)' );
+		rGradient.addColorStop( 1, 'rgba(0, 255, 0, 0)' );
+		context.fillStyle = rGradient;
+ 
+		// 设置globalAlpha
+		context.globalAlpha = weight;
+		context.beginPath();
+		context.arc( x, y, radius, 0, 2 * Math.PI );
+		context.closePath();
+ 
+		context.fill();
+ 
+	};
+ 
+	// 获得渐变颜色条图
+	const getPaletteMap = () => {
+ 
+		//颜色条的颜色分布
+		const colorStops = {
+			1.0: '#f00',
+			0.8: '#e2fa00',
+			0.6: '#33f900',
+			0.3: '#0349df',
+			0.0: '#0f00ff'
+		};
+ 
+		//颜色条的大小
+		const width = 256, height = 10;
+ 
+		// 创建canvas
+		const paletteCanvas = document.createElement( 'canvas' );
+		paletteCanvas.width = width;
+		paletteCanvas.height = height;
+		paletteCanvas.style.position = 'absolute';
+		paletteCanvas.style.top = '20px';
+		paletteCanvas.style.right = '10px';
+		const ctx = paletteCanvas.getContext( '2d' );
+ 
+		// 创建线性渐变色
+		const linearGradient = ctx.createLinearGradient( 0, 0, width, 0 );
+		for ( const key in colorStops ) {
+ 
+			linearGradient.addColorStop( key, colorStops[ key ] );
+ 
+		}
+ 
+		// 绘制渐变色条
+		ctx.fillStyle = linearGradient;
+		ctx.fillRect( 0, 0, width, height );
+		document.body.appendChild( paletteCanvas );
+		const paletteTexture = new THREE.Texture( paletteCanvas );
+		paletteTexture.minFilter = THREE.NearestFilter;
+		paletteTexture.needsUpdate = true;
+ 
+		return paletteTexture;
+ 
+	};
+ 
+	// 获取透明度阶梯图
+	const getAlphaScaleMap = ( width, height ) => {
+ 
+		const canvas = document.createElement( 'canvas' );
+		canvas.width = width;
+		canvas.height = height;
+ 
+		const context = canvas.getContext( '2d' );
+ 
+		// 随机生成温度
+		const tenperature = getTemperature();
+ 
+		// 绘制透明度阶梯图
+		for ( let i = 0; i < segments; i ++ ) {
+ 
+			// 计算出当前温度占标准温度的权值
+			const weight = tenperature[ i ] / 25; // 25 是之前颜色的变化区间 10 - 35
+ 
+			drawCircular( context, {
+				x: Math.random() * w,
+				y: Math.random() * h,
+				radius: 50,
+				weight: weight
+ 
+			} );
+ 
+		}
+ 
+		// 创建 Three 中的图片
+		const tex = new THREE.Texture( canvas );
+		tex.minFilter = THREE.NearestFilter;
+		tex.needsUpdate = true;
+		return tex;
+ 
+	};
+ 
+	init();
+	animate();
+ 
+	// 初始化
+	function init() {
+ 
+		// 渲染器
+		renderer = new THREE.WebGLRenderer( { antialias: true } );
+		renderer.setPixelRatio( window.devicePixelRatio );
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		renderer.setClearColor( '#ccc' );
+		document.body.appendChild( renderer.domElement );
+ 
+		// 场景创建
+		scene = new THREE.Scene();
+ 
+		// camera 创建设置
+		camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+		camera.position.set( 0, 0, 3000 );
+ 
+		scene.add( new THREE.AmbientLight( 0xeef0ff ) );
+ 
+		// 创建热力图渲染的平面几何体
+		const heatMapGeo = new THREE.PlaneBufferGeometry( 500, 500 );
+ 
+		// 创建热力图渲染的材质
+		const heatMapMaterial = new THREE.ShaderMaterial( {
+			transparent: true,
+			vertexShader: document.getElementById( 'vertexshader' ).textContent,
+			fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
+			uniforms: {
+				'alphaScaleMap': {
+					type: 't',
+					value: getAlphaScaleMap( w, h )
+				},
+				'paletteMap': {
+					type: 't',
+					value: getPaletteMap()
+				},
+			}
+ 
+		} );
+ 
+		// 创建热力图Mesh，并显示在 Plane 上
+		const heatMapPlane = new THREE.Mesh( heatMapGeo, heatMapMaterial );
+		scene.add( heatMapPlane );
+		const contorl = new OrbitControls( camera, renderer.domElement );
+		window.addEventListener( 'resize', onWindowResize, false );
+ 
+	}
+ 
+	// 窗口变化的时候，进行 camera 视口的更新
+	function onWindowResize() {
+ 
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+ 
+		renderer.setSize( window.innerWidth, window.innerHeight );
+ 
+	}
+ 
+	// 动画 update
+	function animate() {
+ 
+		requestAnimationFrame( animate );
+		renderer.render( scene, camera );
+ 
+	}
+ 
+</script>
+</body>
+</html>
