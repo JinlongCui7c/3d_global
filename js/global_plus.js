@@ -1,6 +1,4 @@
 import * as THREE from "../modules/three.module.js";
-// import * as d3 from "../node_modules/d3/src/index.js"
-import * as d3 from 'https://unpkg.com/d3?module'
 import { OrbitControls } from "../modules/controls/OrbitControls.js";
 import { InitFlyLine } from "./flyLine.js";
 import { MeshLine, MeshLineMaterial } from "../modules/THREE.MeshLine.js";
@@ -150,8 +148,8 @@ function animate() {
         stars.rotation.z += _earthOptions.autorotationSpeed ? _earthOptions.autorotationSpeed/45 : 0;
         
         // 月球绕地球的旋转
-        var elapsed = clock.getElapsedTime();
-        let moon_r=_earthOptions.earthBallSize+20;
+        var elapsed = clock.getElapsedTime()/5;
+        let moon_r=_earthOptions.earthBallSize+16;
         moonPoints.position.set(Math.sin(elapsed) * moon_r, 0, Math.cos(elapsed) * moon_r);
         
         // 城市动态光环
@@ -295,10 +293,16 @@ function orbit(){
     scene.add(groupHalo);
 
     // 月球对象
-    const moonGeometry = new THREE.SphereGeometry(3, 30, 30);
-    const moonMaterial = new THREE.MeshPhongMaterial({
-        // map: textureLoader.load("./imgs/moon.jpg"),
+    const colorTexture = new THREE.TextureLoader().load('../assets/Ground058_1K_Color.jpg');
+    const normalTexture = new THREE.TextureLoader().load('../assets/Ground058_1K_NormalGL.jpg');
+    let moonMaterial = new THREE.MeshPhongMaterial({
+            map:colorTexture,
+            //法向贴图
+            normalMap:normalTexture,
+            normalScale:new THREE.Vector2(1,1)
     });
+
+    const moonGeometry = new THREE.SphereGeometry(3, 30, 30);
     moonPoints = new THREE.Mesh(moonGeometry, moonMaterial);
     scene.add(moonPoints);
 }
