@@ -67,6 +67,7 @@ var _columnData=[
     {'x':113,'y':31,'value':10},
     {'x':93,'y':41,'value':40},
     {'x':63,'y':11,'value':30},
+    {'x':73,'y':15,'value':40},
     {'x':83,'y':51,'value':20}
 ];
 
@@ -119,9 +120,7 @@ const getTemperature = () => {
 
 // 绘制辐射圆
 const drawCircular = ( context, opts ) => {
-
     var { x, y, radius, weight } = opts;
-
     radius = parseInt( radius * weight );
 
     /**

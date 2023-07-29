@@ -38,6 +38,7 @@ var _earthOptions={
  * @description 初始 化渲染场景
  */
 function initRenderer() {
+    
     renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( width, height );
@@ -137,6 +138,10 @@ function renders() {
  * 更新
  **/
 function animate() {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize( innerWidth, innerHeight );
+    
     window.requestAnimationFrame( () => {
         if (controls) controls.update();
 

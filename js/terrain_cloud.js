@@ -4,7 +4,7 @@ import { OrbitControls } from "../modules/controls/OrbitControls.js";
 
 var _domID="three-frame";
 var _earthOptions={
-    imgEarth: '../assets/earth_bg.jpg',//地球贴图
+    imgEarth: '../assets/earth_bg_2.jpg',//地球贴图
     imgSky: '../assets/starry_sky_bg.jpg',//深空背景
     autorotationSpeed: 0.004,//自转速度（正数自西向东转，负数为逆向）
     cameraZ: 200,//摄像头高度,
@@ -51,8 +51,6 @@ orbitcontrols.dampingFactor = 0.9;
 // 设置光线
 scene.add(new THREE.HemisphereLight('#ffffff', '#ffffff', 1));
 
-// 定义地球材质
-// var earthTexture = THREE.ImageUtils.loadTexture(_earthOptions.imgEarth);
 
 // this.renderEarthByRender();
 
@@ -113,14 +111,13 @@ uniforms[ "texture3" ].value.wrapT = THREE.RepeatWrapping;
 // 新建三维向量newPosition,这个向量代表球体上的点经过灰度贴图操作后新点的位置。
 // 由于是灰度图，那么他的r,g,b应该是相同的，并且保证新的顶点坐标是沿着球表面法向量方向，
 // 所以 vec3 newPosition = position + normal * tcolor.r / 2.0;
-
 var vertexShader= `
     varying vec2 vUv;
     uniform sampler2D texture2;
     void main() {
         vUv = uv;
         vec4 tcolor = texture2D( texture2, vUv );
-        vec3 newPosition = position + normal * tcolor.r / 2.0;
+        vec3 newPosition = position + normal * tcolor.r / 0.3;
         gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );
     }
 `
@@ -129,7 +126,6 @@ var vertexShader= `
 // 片元着色器使用两个纹理，还是顶点着色器传过来的uv以及时间。
 // 这里tcolor1就是地图点的颜色，tcolor3代表云朵的纹理，但是他的uv是随时间变化的（这里要求纹理设置重复）。
 // 这里还是用了mix方法，mix方法返回线性混合的x和y，如：x*(1−a)+y*a。
-
 var fragmentShader= `
     varying vec2 vUv;
     uniform sampler2D texture1;
@@ -158,8 +154,6 @@ earthBall = new THREE.Mesh(
 
 earthBall.layers.set(0);
 scene.add(earthBall);
-
-// // // // // // // // // // // // // // // // // // //
 
 dom.appendChild(renderer.domElement);
 render();
@@ -193,6 +187,9 @@ function getPosition(_longitude, _latitude, _radius) {
 
 // 执行函数
 function render() {
+    camera.aspect = dom.clientWidth / dom.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(dom.clientWidth, dom.clientHeight)
     if (handle) {
         cancelAnimationFrame(handle);
     }
